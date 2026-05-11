@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>koukou app - AI 智能抠图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ==========================================
+   DESIGN TOKENS — exact Figma match
+   ========================================== */
+:root {
+  --bg:       #0A0A0F;
+  --surface:  #12121A;
+  --card:     #1A1A24;
+  --accent:   #6B75FF;
+  --accent-hover: #5A64EE;
+  --white:    #FFFFFF;
+  --text:     #EFEFF5;
+  --sub:      #808094;
+  --border:   #26262E;
+  --tag-before-bg: #777777;
+  --footer-bg: #1F1F2E;
+  --footer-text: #B2B2BF;
+
+  --margin:   120px;
+  --header-h: 72px;
+  --hero-y:   168px;
+  --card-y:   403px;
+  --card-h:   353px;
+  --footer-y: 888px;
+  --footer-h: 72px;
+  --radius:   20px;
+  --radius-sm:14px;
+  --radius-xs:6px;
+  --transition: 0.2s ease;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient glow */
+.ambient-glow {
+  position: fixed;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 450px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse 50% 50% at 50% 0%,
+    rgba(107,115,255,0.12) 0%,
+    rgba(10,10,15,0) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ==========================================
+   HEADER
+   ========================================== */
+.header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--header-h);
+  background: rgba(10,10,15,0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--margin);
+  z-index: 100;
+  border-bottom: 1px solid transparent;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.3px;
+  cursor: pointer;
+}
+
+.nav {
+  display: flex;
+  gap: 40px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.nav a {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--sub);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.nav a:hover { color: var(--white); }
+
+.header-cta {
+  margin-left: auto;
+  background: var(--accent);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 19px;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.header-cta:hover { background: var(--accent-hover); }
+
+/* ==========================================
+   MAIN CONTENT
+   ========================================== */
+.main {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding-top: var(--header-h);
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+/* Hero text */
+.hero {
+  padding: 96px var(--margin) 0;
+}
+
+.hero h1 {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1.125;
+  color: var(--white);
+  letter-spacing: -1.5px;
+}
+
+.hero h2 {
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1.143;
+  color: var(--sub);
+  margin-top: 8px;
+  letter-spacing: -1.2px;
+}
+
+.hero p {
+  font-size: 17px;
+  color: var(--sub);
+  margin-top: 24px;
+  line-height: 1.5;
+}
+
+/* ==========================================
+   CONTENT ROW
+   ========================================== */
+.content-row {
+  display: flex;
+  gap: 60px;
+  padding: 65px var(--margin) 0;
+  align-items: flex-start;
+}
+
+/* ---- Upload Card ---- */
+.upload-card {
+  width: 460px;
+  min-width: 460px;
+  height: 353px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 0 0;
+  position: relative;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.upload-card.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(107,115,255,0.15);
+}
+
+.upload-icon-circle {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.upload-icon-circle svg {
+  width: 24px; height: 24px;
+  stroke: white;
+}
+
+.upload-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--white);
+  margin-top: 24px;
+}
+
+.upload-hint {
+  font-size: 13px;
+  color: var(--sub);
+  margin-top: 10px;
+}
+
+.upload-btn {
+  margin-top: 28px;
+  width: 180px;
+  height: 48px;
+  border-radius: 24px;
+  background: var(--accent);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+  font-family: inherit;
+}
+
+.upload-btn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.upload-btn:active { transform: translateY(0); }
+
+.upload-time {
+  font-size: 12px;
+  color: var(--sub);
+  margin-top: 18px;
+}
+
+.hidden-input { display: none; }
+
+/* ---- Preview Card - pixel-matched to Figma ---- */
+.preview-card {
+  flex: 1;
+  height: 353px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 17px 40px 0 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--sub);
+  letter-spacing: 2px;
+  margin-left: 12px;
+  margin-bottom: 10px;
+}
+
+.preview-images {
+  display: flex;
+  align-items: center;
+}
+
+.image-box {
+  width: 292px;
+  height: 240px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.image-tag {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--radius-xs);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.image-tag.before { background: var(--tag-before-bg); }
+.image-tag.after  { background: var(--accent); }
+
+.image-placeholder {
+  font-size: 44px;
+  opacity: 0.25;
+  color: var(--sub);
+  user-select: none;
+}
+
+.preview-arrow {
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+  margin: 0 8px;
+}
+
+.download-btn {
+  width: 140px;
+  height: 42px;
+  border-radius: 21px;
+  background: var(--accent);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition);
+  font-family: inherit;
+  margin-left: 400px;
+  margin-top: 11px;
+  margin-bottom: auto;
+}
+
+.download-btn:hover { background: var(--accent-hover); }
+.download-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Processing state */
+.processing-indicator {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--sub);
+  font-size: 13px;
+  z-index: 5;
+  background: rgba(18,18,26,0.85);
+  border-radius: var(--radius-sm);
+}
+
+.processing .processing-indicator { display: flex; }
+
+.processing img {
+  filter: brightness(0.5);
+}
+
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==========================================
+   FOOTER
+   ========================================== */
+.footer {
+  max-width: 1440px;
+  margin: 132px auto 0;
+  height: var(--footer-h);
+  background: var(--footer-bg);
+  border-top: 1px solid rgba(38,38,46,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--margin);
+}
+
+.footer-copy {
+  font-size: 14px;
+  color: var(--footer-text);
+}
+
+.footer-links {
+  font-size: 14px;
+  color: var(--footer-text);
+  display: flex;
+  gap: 8px;
+}
+
+.footer-links span {
+  color: var(--footer-text);
+  opacity: 0.4;
+}
+
+.footer-links a {
+  color: var(--footer-text);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.footer-links a:hover { color: var(--white); }
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+@media (max-width: 1280px) {
+  :root { --margin: 60px; }
+  .hero h1 { font-size: 48px; }
+  .hero h2 { font-size: 40px; }
+  .content-row { flex-direction: column; align-items: center; }
+  .upload-card { width: 100%; min-width: unset; max-width: 500px; }
+  .preview-card { width: 100%; max-width: 700px; padding: 17px 24px 0 24px; }
+  .preview-images { flex-wrap: wrap; justify-content: center; }
+  .image-box { width: 45%; min-width: 200px; }
+  .nav { display: none; }
+}
+
+@media (max-width: 768px) {
+  :root { --margin: 24px; }
+  .hero h1 { font-size: 32px; }
+  .hero h2 { font-size: 28px; }
+  .hero p { font-size: 15px; }
+  .content-row { padding-top: 40px; }
+  .footer { flex-direction: column; gap: 12px; justify-content: center; }
+  .footer-links { gap: 24px; }
+  .image-box { width: 100%; height: 180px; }
+  .preview-card { height: auto; padding: 17px 16px 16px 16px; }
+  .preview-images { flex-direction: column; gap: 8px; }
+  .preview-arrow { transform: rotate(90deg); margin: 4px 0; }
+  .download-btn { margin: 16px auto 0; }
+  .upload-card { height: auto; padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="ambient-glow"></div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">koukou app</div>
+  <nav class="nav">
+    <a href="#">首页</a>
+    <a href="#">功能</a>
+    <a href="#">价格</a>
+    <a href="#">常见问题</a>
+  </nav>
+  <button class="header-cta">免费试用</button>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>一键去除背景</h1>
+    <h2>AI 智能识别，3 秒完成抠图</h2>
+    <p>无需手动操作，上传图片即可获得透明背景的高清结果。</p>
+  </section>
+
+  <!-- CONTENT ROW -->
+  <div class="content-row">
+
+    <!-- Upload Card -->
+    <div class="upload-card" id="uploadCard">
+      <div class="upload-icon-circle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+      </div>
+      <div class="upload-text">拖拽图片到此处，或点击上传</div>
+      <div class="upload-hint">支持 PNG / JPG / WebP，最大 10MB</div>
+      <button class="upload-btn" id="uploadBtn">选择图片</button>
+      <div class="upload-time">平均处理时间约 3 秒</div>
+      <input type="file" accept="image/png,image/jpeg,image/webp" class="hidden-input" id="fileInput">
+    </div>
+
+    <!-- Preview Card -->
+    <div class="preview-card" id="previewCard">
+      <div class="preview-label">预览</div>
+      <div class="preview-images">
+        <!-- Before -->
+        <div class="image-box" id="beforeBox">
+          <span class="image-tag before">处理前</span>
+          <span class="image-placeholder">🖼</span>
+          <img id="beforeImg" src="" alt="" style="display:none">
+          <div class="processing-indicator">
+            <div class="spinner"></div>
+            <span>AI 处理中...</span>
+          </div>
+        </div>
+
+        <span class="preview-arrow">→</span>
+
+        <!-- After -->
+        <div class="image-box" id="afterBox">
+          <span class="image-tag after">处理后</span>
+          <span class="image-placeholder">✨</span>
+          <img id="afterImg" src="" alt="" style="display:none">
+        </div>
+      </div>
+      <button class="download-btn" id="downloadBtn" disabled>下载 PNG</button>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <span class="footer-copy">&copy; 2026 AI智能抠图 - 保留所有权利</span>
+    <div class="footer-links">
+      <a href="#">隐私政策</a>
+      <span> | </span>
+      <a href="#">服务条款</a>
+      <span> | </span>
+      <a href="#">联系我们</a>
+      <span> | </span>
+      <a href="#">帮助中心</a>
+    </div>
+  </footer>
+
+</main>
+
+<!-- imgly background removal (ES module) - multi-CDN fallback -->
+<script type="module">
+// Try China-friendly CDN first, fallback to jsdelivr
+let removeBackground;
+try {
+  const mod = await import('https://esm.sh/@imgly/background-removal@1.6.0');
+  removeBackground = mod.removeBackground;
+} catch (e) {
+  const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/dist/+esm');
+  removeBackground = mod.removeBackground;
+}
+
+// ==========================================
+// DOM refs
+// ==========================================
+const uploadCard   = document.getElementById('uploadCard');
+const uploadBtn    = document.getElementById('uploadBtn');
+const fileInput    = document.getElementById('fileInput');
+const beforeBox    = document.getElementById('beforeBox');
+const beforeImg    = document.getElementById('beforeImg');
+const beforePh     = beforeBox.querySelector('.image-placeholder');
+const afterBox     = document.getElementById('afterBox');
+const afterImg     = document.getElementById('afterImg');
+const afterPh      = afterBox.querySelector('.image-placeholder');
+const downloadBtn  = document.getElementById('downloadBtn');
+
+let originalFile = null;
+let resultBlob   = null;
+
+// ==========================================
+// File handling
+// ==========================================
+function handleFile(file) {
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+    alert('请上传 PNG、JPG 或 WebP 格式的图片');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert('图片大小不能超过 10MB');
+    return;
+  }
+
+  originalFile = file;
+
+  // Show before image
+  const url = URL.createObjectURL(file);
+  beforeImg.src = url;
+  beforeImg.style.display = 'block';
+  beforePh.style.display = 'none';
+
+  // Reset after
+  afterImg.style.display = 'none';
+  afterPh.style.display = 'block';
+  downloadBtn.disabled = true;
+
+  // Start removal
+  removeBg(file);
+}
+
+async function removeBg(file) {
+  beforeBox.classList.add('processing');
+
+  try {
+    // Try self-hosted models first (China-accessible), fallback to default CDN
+    const config = {
+      model: 'isnet_quint8',   // smallest model, faster download for China
+      output: {
+        format: 'image/png',
+      },
+      publicPath: new URL('models/', location.href).href,
+      progress: (key, current, total) => {
+        // silent progress tracking
+      },
+    };
+
+    let blob;
+    try {
+      blob = await removeBackground(file, config);
+    } catch (e) {
+      // Fallback to default CDN if self-hosted models fail
+      console.warn('Self-hosted models failed, trying default CDN:', e.message);
+      delete config.publicPath;
+      blob = await removeBackground(file, config);
+    }
+
+    resultBlob = blob;
+    const url = URL.createObjectURL(blob);
+    afterImg.src = url;
+    afterImg.style.display = 'block';
+    afterPh.style.display = 'none';
+    downloadBtn.disabled = false;
+
+  } catch (err) {
+    console.error('Background removal failed:', err);
+    alert('抠图处理失败，请重试。错误信息：' + err.message);
+    // Reset
+    afterPh.style.display = 'block';
+    afterImg.style.display = 'none';
+  } finally {
+    beforeBox.classList.remove('processing');
+  }
+}
+
+// ==========================================
+// Upload triggers
+// ==========================================
+uploadBtn.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', (e) => {
+  handleFile(e.target.files[0]);
+  fileInput.value = ''; // allow re-upload same file
+});
+
+// Drag & drop
+uploadCard.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadCard.classList.add('drag-over');
+});
+
+uploadCard.addEventListener('dragleave', () => {
+  uploadCard.classList.remove('drag-over');
+});
+
+uploadCard.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadCard.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  handleFile(file);
+});
+
+// Also allow drop on body
+document.body.addEventListener('dragover', (e) => e.preventDefault());
+document.body.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+// ==========================================
+// Download
+// ==========================================
+downloadBtn.addEventListener('click', () => {
+  if (!resultBlob) return;
+  const url = URL.createObjectURL(resultBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (originalFile?.name || 'image').replace(/\.[^.]+$/, '') + '_nobg.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+</script>
+
+</body>
+</html>
