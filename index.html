@@ -424,10 +424,8 @@ body {
   transition: color var(--transition);
 }
 
-.footer-links a:hover { color: var(--white); }
-
 /* ==========================================
-   RESPONSIVE
+   RESPONSIVE — tablet & mobile
    ========================================== */
 @media (max-width: 1280px) {
   :root { --margin: 60px; }
@@ -439,22 +437,152 @@ body {
   .preview-images { flex-wrap: wrap; justify-content: center; }
   .image-box { width: 45%; min-width: 200px; }
   .nav { display: none; }
+  .header { padding: 0 24px; }
+  .header-cta { padding: 8px 18px; font-size: 12px; }
 }
 
 @media (max-width: 768px) {
-  :root { --margin: 24px; }
-  .hero h1 { font-size: 32px; }
-  .hero h2 { font-size: 28px; }
-  .hero p { font-size: 15px; }
-  .content-row { padding-top: 40px; }
-  .footer { flex-direction: column; gap: 12px; justify-content: center; }
-  .footer-links { gap: 24px; }
-  .image-box { width: 100%; height: 180px; }
-  .preview-card { height: auto; padding: 17px 16px 16px 16px; }
-  .preview-images { flex-direction: column; gap: 8px; }
-  .preview-arrow { transform: rotate(90deg); margin: 4px 0; }
-  .download-btn { margin: 16px auto 0; }
-  .upload-card { height: auto; padding: 32px 24px; }
+  :root {
+    --margin: 20px;
+    --header-h: 60px;
+    --radius: 16px;
+    --radius-sm: 12px;
+  }
+  .ambient-glow {
+    width: 100vw;
+    height: 280px;
+    opacity: 0.6;
+  }
+  .header {
+    padding: 0 16px;
+    height: var(--header-h);
+  }
+  .logo { font-size: 18px; }
+  .header-cta {
+    padding: 8px 16px;
+    font-size: 12px;
+    border-radius: 16px;
+  }
+  .hero {
+    padding: 60px var(--margin) 0;
+  }
+  .hero h1 { font-size: 30px; letter-spacing: -0.8px; }
+  .hero h2 { font-size: 24px; letter-spacing: -0.5px; }
+  .hero p { font-size: 14px; margin-top: 16px; }
+  .content-row {
+    padding: 32px var(--margin) 0;
+    gap: 24px;
+  }
+  .upload-card {
+    height: auto;
+    padding: 36px 20px 28px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .upload-icon-circle { width: 48px; height: 48px; }
+  .upload-icon-circle svg { width: 20px; height: 20px; }
+  .upload-text { font-size: 15px; margin-top: 20px; }
+  .upload-hint { font-size: 12px; margin-top: 8px; }
+  .upload-btn {
+    width: 100%;
+    max-width: 260px;
+    height: 46px;
+    font-size: 15px;
+    margin-top: 22px;
+    border-radius: 23px;
+  }
+  .upload-time { font-size: 11px; margin-top: 14px; }
+  .preview-card {
+    height: auto;
+    padding: 20px 16px 20px 16px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .preview-label {
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    margin-left: 4px;
+    margin-bottom: 8px;
+  }
+  .preview-images {
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+  .image-box {
+    width: 100%;
+    max-width: 360px;
+    height: 200px;
+  }
+  .preview-arrow {
+    transform: rotate(90deg);
+    margin: 2px 0;
+    font-size: 18px;
+  }
+  .image-tag { font-size: 10px; height: 22px; padding: 0 6px; }
+  .download-btn {
+    width: 100%;
+    max-width: 200px;
+    height: 44px;
+    margin: 20px auto 0;
+    font-size: 15px;
+  }
+  .footer {
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    height: auto;
+    padding: 20px var(--margin);
+    margin-top: 60px;
+  }
+  .footer-copy { font-size: 12px; text-align: center; }
+  .footer-links { font-size: 12px; gap: 12px; flex-wrap: wrap; justify-content: center; }
+}
+
+/* Small phones (iPhone SE, etc.) */
+@media (max-width: 400px) {
+  :root {
+    --margin: 16px;
+    --header-h: 54px;
+    --radius: 14px;
+    --radius-sm: 10px;
+  }
+  .ambient-glow {
+    height: 200px;
+    opacity: 0.4;
+  }
+  .hero { padding: 50px var(--margin) 0; }
+  .hero h1 { font-size: 26px; }
+  .hero h2 { font-size: 21px; }
+  .hero p { font-size: 13px; }
+  .content-row { padding-top: 24px; gap: 18px; }
+  .upload-card { padding: 28px 16px 24px; }
+  .upload-icon-circle { width: 42px; height: 42px; }
+  .upload-btn { height: 44px; font-size: 14px; max-width: 100%; }
+  .image-box { height: 160px; }
+  .preview-card { padding: 16px 12px 16px 12px; }
+  .download-btn { height: 42px; font-size: 14px; max-width: 100%; }
+  .footer { padding: 16px var(--margin); margin-top: 40px; }
+  .footer-links { font-size: 11px; gap: 8px; }
+}
+
+/* Mobile touch targets — ensure buttons are tappable */
+@media (hover: none) and (pointer: coarse) {
+  .upload-btn,
+  .download-btn,
+  .header-cta {
+    min-height: 44px;
+  }
+  .upload-card {
+    cursor: default;
+  }
+}
+
+/* Safe area for notched phones */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .footer {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  }
 }
 </style>
 </head>
