@@ -795,13 +795,19 @@ async function removeBg(file) {
     };
 
     let blob;
+    // 1st: Cloudflare CDN (fast global edge nodes)
     try {
-      blob = await removeBackground(file, config);
+      const cdnConfig = {...config};
+      delete cdnConfig.publicPath;
+      blob = await removeBackground(file, cdnConfig);
     } catch (e) {
-      // Fallback to default CDN if self-hosted models fail
-      console.warn('Self-hosted models failed, trying default CDN:', e.message);
-      delete config.publicPath;
-      blob = await removeBackground(file, config);
+      console.warn("CDN failed, trying self-hosted:", e.message);
+      // 2nd: GitHub Pages self-hosted
+      try {
+        blob = await removeBackground(file, config);
+      } catch (e2) {
+        throw new Error("模型加载失败，请检查网络后刷新重试");
+      }
     }
 
     resultBlob = await postProcess(blob);
