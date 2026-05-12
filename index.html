@@ -800,8 +800,8 @@ async function removeBg(file) {
       blob = await removeBackground(file, config);
     }
 
-    resultBlob = blob;
-    const url = URL.createObjectURL(blob);
+    resultBlob = await postProcess(blob);
+    const url = URL.createObjectURL(resultBlob);
     afterImg.src = url;
     afterImg.style.display = 'block';
     afterPh.style.display = 'none';
@@ -856,6 +856,60 @@ document.body.addEventListener('drop', (e) => {
   if (file) handleFile(file);
 });
 
+
+// Color decontamination — removes white/colored fringing at transparency edges
+async function postProcess(blob) {
+  const img = new Image();
+  const url = URL.createObjectURL(blob);
+  await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url; });
+  URL.revokeObjectURL(url);
+
+  const w = img.naturalWidth, h = img.naturalHeight;
+  if (w < 2 || h < 2) return blob;
+
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const d = imageData.data;
+  const src = new Uint8ClampedArray(d);
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const a = src[i + 3];
+      if (a === 0 || a === 255) continue;
+
+      const neighbors = [];
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          if (nx < 0 || nx >= w) continue;
+          const ni = (ny * w + nx) * 4;
+          if (src[ni + 3] === 255) {
+            neighbors.push([src[ni], src[ni + 1], src[ni + 2]]);
+          }
+        }
+      }
+
+      if (neighbors.length > 0) {
+        neighbors.sort((a, b) => (a[0] + a[1] + a[2]) - (b[0] + b[1] + b[2]));
+        const m = neighbors[Math.floor(neighbors.length / 2)];
+        d[i] = m[0];
+        d[i + 1] = m[1];
+        d[i + 2] = m[2];
+      }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return new Promise(resolve => c.toBlob(resolve, 'image/png'));
+}
 
 // Download
 // ==========================================
