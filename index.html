@@ -677,15 +677,29 @@ body {
 
 <!-- imgly background removal (ES module) - multi-CDN fallback -->
 <script type="module">
+// Show loading state while importing the library
+const uploadBtnEl = document.getElementById('uploadBtn');
+uploadBtnEl.textContent = '加载中...';
+uploadBtnEl.disabled = true;
+
 // Try China-friendly CDN first, fallback to jsdelivr
 let removeBackground;
 try {
   const mod = await import('https://esm.sh/@imgly/background-removal@1.6.0');
   removeBackground = mod.removeBackground;
 } catch (e) {
-  const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/dist/+esm');
-  removeBackground = mod.removeBackground;
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/dist/+esm');
+    removeBackground = mod.removeBackground;
+  } catch (e2) {
+    alert('库加载失败，请检查网络连接后刷新页面。');
+    throw e2;
+  }
 }
+
+// Restore button
+uploadBtnEl.textContent = '选择图片';
+uploadBtnEl.disabled = false;
 
 // ==========================================
 // DOM refs
@@ -741,14 +755,17 @@ async function removeBg(file) {
   try {
     // Try self-hosted models first (China-accessible), fallback to default CDN
     const config = {
-      model: 'isnet_quint8',   // smallest model, faster download for China
+      model: 'isnet',   // full-precision for best edge detection
       output: {
         format: 'image/png',
       },
-      publicPath: new URL('models/', location.href).href,
+      // Ensure trailing slash so models/ resolves correctly on GitHub Pages
+	      publicPath: new URL('models/', location.href.endsWith('/') ? location.href : location.href + '/').href,
       progress: (key, current, total) => {
-        // silent progress tracking
-      },
+          const pct = Math.round(current / total * 100);
+          const indicator = beforeBox.querySelector('.processing-indicator span');
+          if (indicator) indicator.textContent = 'AI处理中... ' + pct + '%';
+        },
     };
 
     let blob;
@@ -761,8 +778,8 @@ async function removeBg(file) {
       blob = await removeBackground(file, config);
     }
 
-    resultBlob = blob;
-    const url = URL.createObjectURL(blob);
+    resultBlob = await postProcess(blob);
+    const url = URL.createObjectURL(resultBlob);
     afterImg.src = url;
     afterImg.style.display = 'block';
     afterPh.style.display = 'none';
@@ -813,6 +830,60 @@ document.body.addEventListener('drop', (e) => {
   const file = e.dataTransfer.files[0];
   if (file) handleFile(file);
 });
+
+
+// Sharpen + alpha edge refinement — makes output crisper and edges cleaner
+async function postProcess(blob) {
+  const img = new Image();
+  const url = URL.createObjectURL(blob);
+  await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url; });
+  URL.revokeObjectURL(url);
+
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0);
+
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const d = imageData.data;
+  const src = new Uint8ClampedArray(d);
+
+  // 3x3 sharpen kernel: [0,-1,0, -1,5,-1, 0,-1,0]
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = (y * w + x) * 4;
+      for (let ch = 0; ch < 3; ch++) {
+        const top    = src[((y-1)*w + x)  *4 + ch];
+        const bottom = src[((y+1)*w + x)  *4 + ch];
+        const left   = src[(y*w + (x-1))*4 + ch];
+        const right  = src[(y*w + (x+1))*4 + ch];
+        const center = src[i + ch];
+        d[i + ch] = Math.min(255, Math.max(0, -top - bottom - left - right + 5 * center));
+      }
+    }
+  }
+
+  // Alpha edge smoothing — blur alpha only at transition edges
+  const alpha = new Uint8ClampedArray(src.length / 4);
+  for (let i = 0; i < alpha.length; i++) alpha[i] = src[i*4 + 3];
+
+  for (let y = 2; y < h - 2; y++) {
+    for (let x = 2; x < w - 2; x++) {
+      const i = y * w + x;
+      const a = alpha[i];
+      if (a > 10 && a < 245) {
+        const n = alpha[i-w-1] + alpha[i-w] + alpha[i-w+1]
+                + alpha[i-1]   + a           + alpha[i+1]
+                + alpha[i+w-1] + alpha[i+w] + alpha[i+w+1];
+        d[i*4 + 3] = Math.round(n / 9);
+      }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return new Promise(resolve => c.toBlob(resolve, 'image/png'));
+}
 
 // ==========================================
 // Download
