@@ -682,24 +682,46 @@ const uploadBtnEl = document.getElementById('uploadBtn');
 uploadBtnEl.textContent = '加载中...';
 uploadBtnEl.disabled = true;
 
-// Try China-friendly CDN first, fallback to jsdelivr
+// Multi-source import with timeout: self-hosted first (fastest in China)
+const IMPORT_TIMEOUT = 15000;
 let removeBackground;
-try {
-  const mod = await import('https://esm.sh/@imgly/background-removal@1.6.0');
-  removeBackground = mod.removeBackground;
-} catch (e) {
+
+async function tryImport(url, timeout) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
   try {
-    const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/dist/+esm');
-    removeBackground = mod.removeBackground;
-  } catch (e2) {
-    alert('库加载失败，请检查网络连接后刷新页面。');
-    throw e2;
+    const mod = await import(url);
+    clearTimeout(timer);
+    return mod;
+  } catch (e) {
+    clearTimeout(timer);
+    throw e;
   }
 }
 
-// Restore button
-uploadBtnEl.textContent = '选择图片';
-uploadBtnEl.disabled = false;
+const sources = [
+  './lib/background-removal.esm.js',
+  'https://esm.sh/@imgly/background-removal@1.6.0',
+  'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/dist/+esm',
+];
+
+for (const src of sources) {
+  try {
+    const mod = await tryImport(src, IMPORT_TIMEOUT);
+    removeBackground = mod.removeBackground;
+    break;
+  } catch (e) {
+    console.warn('Import failed:', src, e.message);
+  }
+}
+
+if (removeBackground) {
+  uploadBtnEl.textContent = '选择图片';
+  uploadBtnEl.disabled = false;
+} else {
+  uploadBtnEl.textContent = '加载失败，点此重试';
+  uploadBtnEl.disabled = false;
+}
 
 // ==========================================
 // DOM refs
@@ -799,7 +821,10 @@ async function removeBg(file) {
 // ==========================================
 // Upload triggers
 // ==========================================
-uploadBtn.addEventListener('click', () => fileInput.click());
+uploadBtn.addEventListener('click', () => {
+  if (!removeBackground) { location.reload(); return; }
+  fileInput.click();
+});
 
 fileInput.addEventListener('change', (e) => {
   handleFile(e.target.files[0]);
