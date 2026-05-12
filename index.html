@@ -677,15 +677,29 @@ body {
 
 <!-- imgly background removal (ES module) - multi-CDN fallback -->
 <script type="module">
+// Show loading state while importing the library
+const uploadBtnEl = document.getElementById('uploadBtn');
+uploadBtnEl.textContent = '加载中...';
+uploadBtnEl.disabled = true;
+
 // Try China-friendly CDN first, fallback to jsdelivr
 let removeBackground;
 try {
   const mod = await import('https://esm.sh/@imgly/background-removal@1.6.0');
   removeBackground = mod.removeBackground;
 } catch (e) {
-  const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/dist/+esm');
-  removeBackground = mod.removeBackground;
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.6.0/dist/+esm');
+    removeBackground = mod.removeBackground;
+  } catch (e2) {
+    alert('库加载失败，请检查网络连接后刷新页面。');
+    throw e2;
+  }
 }
+
+// Restore button
+uploadBtnEl.textContent = '选择图片';
+uploadBtnEl.disabled = false;
 
 // ==========================================
 // DOM refs
@@ -745,7 +759,8 @@ async function removeBg(file) {
       output: {
         format: 'image/png',
       },
-      publicPath: new URL('models/', location.href).href,
+      // Ensure trailing slash so models/ resolves correctly on GitHub Pages
+	      publicPath: new URL('models/', location.href.endsWith('/') ? location.href : location.href + '/').href,
       progress: (key, current, total) => {
         // silent progress tracking
       },
