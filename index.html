@@ -776,7 +776,7 @@ async function removeBg(file) {
   try {
     // Try self-hosted models first (China-accessible), fallback to default CDN
     const config = {
-      model: 'isnet',   // full-precision for best edge detection
+      model: 'isnet_fp16',   // half-precision: 84MB, near-identical quality to full
       output: {
         format: 'image/png',
       },
@@ -785,7 +785,12 @@ async function removeBg(file) {
       progress: (key, current, total) => {
           const pct = Math.round(current / total * 100);
           const indicator = beforeBox.querySelector('.processing-indicator span');
-          if (indicator) indicator.textContent = 'AI处理中... ' + pct + '%';
+          if (!indicator) return;
+          let stage = '加载中';
+          if (key.includes('model')) stage = '下载模型';
+          else if (key.includes('wasm') || key.includes('mjs')) stage = '加载运行库';
+          else if (key.includes('compute')) stage = 'AI 处理';
+          indicator.textContent = stage + '... ' + pct + '%';
         },
     };
 
